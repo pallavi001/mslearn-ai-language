@@ -2,7 +2,8 @@ from dotenv import load_dotenv
 from datetime import datetime
 import os
 
-# Import namespaces
+ # Import namespaces
+import azure.cognitiveservices.speech as speech_sdk
 
 
 def main():
@@ -15,10 +16,19 @@ def main():
         ai_key = os.getenv('SPEECH_KEY')
         ai_region = os.getenv('SPEECH_REGION')
 
-        # Configure translation
+         # Configure translation
+        translation_config = speech_sdk.translation.SpeechTranslationConfig(ai_key, ai_region)
+        translation_config.speech_recognition_language = 'en-US'
+        translation_config.add_target_language('fr')
+        translation_config.add_target_language('es')
+        translation_config.add_target_language('hi')
+        print('Ready to translate from',translation_config.speech_recognition_language)
 
 
-        # Configure speech
+
+         # Configure speech
+        speech_config = speech_sdk.SpeechConfig(ai_key, ai_region)
+
 
 
         # Get user input
@@ -29,7 +39,7 @@ def main():
                 Translate(targetLanguage)
             else:
                 targetLanguage = 'quit'
-                
+
 
     except Exception as ex:
         print(ex)
@@ -37,10 +47,29 @@ def main():
 def Translate(targetLanguage):
     translation = ''
 
-    # Translate speech
+     # Translate speech
+    audio_config = speech_sdk.AudioConfig(use_default_microphone=True)
+    translator = speech_sdk.translation.TranslationRecognizer(translation_config, audio_config = audio_config)
+    print("Speak now...")
+    result = translator.recognize_once_async().get()
+    print('Translating "{}"'.format(result.text))
+    translation = result.translations[targetLanguage]
+    print(translation)
 
 
-    # Synthesize translation
+
+     # Synthesize translation
+    voices = {
+            "fr": "fr-FR-HenriNeural",
+            "es": "es-ES-ElviraNeural",
+            "hi": "hi-IN-MadhurNeural"
+    }
+    speech_config.speech_synthesis_voice_name = voices.get(targetLanguage)
+    speech_synthesizer = speech_sdk.SpeechSynthesizer(speech_config)
+    speak = speech_synthesizer.speak_text_async(translation).get()
+    if speak.reason != speech_sdk.ResultReason.SynthesizingAudioCompleted:
+        print(speak.reason)
+
 
 
 
